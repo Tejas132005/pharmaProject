@@ -5,12 +5,84 @@ from django.views.generic import TemplateView
 from django.utils.html import format_html
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .forms import VCFUploadForm
-from .models import Patient, DrugAssessment
-from .services.vcf_parser import VCFParser
+from .forms import VCFUploadForm 
+from .models import Patient, DrugAssessment 
+from .services.vcf_parser import VCFParser 
 from .services.risk_engine import RiskEngine
 from .services.llm_service import LLMService
 from .services.json_formatter import JSONFormatter
+
+
+class LandingView(View):
+    def get(self, request):
+        return render(request, 'core/landing.html')
+
+    def post(self, request):
+        # We handle the upload logic directly on the landing page
+        uploaded_file = request.FILES.get('uploaded_file')
+        drug_input = request.POST.get('drugs', '')
+
+        if not uploaded_file or not drug_input:
+            return render(request, 'core/landing.html', {'error': 'Please provide both a VCF file and target medications.'})
+
+        # Create Patient record
+        patient = Patient.objects.create(
+            uploaded_file=uploaded_file
+        )
+
+        drug_names = drug_input.split(',')
+
+        # Step 1: Parse VCF
+        parser = VCFParser(patient.uploaded_file.path)
+        validation_ok, msg = parser.validate()
+        if not validation_ok:
+            return render(request, 'core/landing.html', {
+                'error': msg
+            })
+
+        parsing_results = parser.parse()
+        if not parsing_results['success']:
+            return render(request, 'core/landing.html', {
+                'error': parsing_results['error']
+            })
+
+        # Step 2: Risk Prediction & LLM Explanation
+        risk_engine = RiskEngine(parsing_results['variants'])
+        llm_service = LLMService()
+
+        for drug_name in drug_names:
+            drug_name = drug_name.strip()
+            if not drug_name:
+                continue
+
+            prediction = risk_engine.predict(drug_name)
+            prediction['drug'] = drug_name
+
+            # Generate LLM explanation
+            explanation = llm_service.generate_explanation({
+                'drug': drug_name,
+                'gene': prediction['gene'],
+                'phenotype': prediction['phenotype'],
+                'risk_label': prediction['risk_label'],
+                'detected_variants': prediction.get('detected_variants', []),
+            })
+
+            # Format to Strict JSON
+            final_json = JSONFormatter.format_output(
+                prediction, explanation, patient.patient_id
+            )
+
+            # Save Assessment
+            DrugAssessment.objects.create(
+                patient=patient,
+                drug_name=drug_name,
+                risk_label=prediction['risk_label'],
+                confidence_score=prediction['confidence_score'],
+                severity=prediction['severity'],
+                json_output=final_json,
+            )
+
+        return redirect('results', patient_id=patient.id)
 
 
 class UploadView(View):
