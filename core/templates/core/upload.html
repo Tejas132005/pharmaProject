@@ -1,0 +1,111 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Upload VCF - PharmaGuard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 16px;
+        padding: 4rem 2rem;
+        text-align: center;
+        background: #f1f5f9;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 2rem;
+    }
+
+    .upload-area:hover,
+    .upload-area.dragover {
+        border-color: var(--secondary);
+        background: #eff6ff;
+    }
+
+    .upload-icon {
+        font-size: 3rem;
+        color: var(--secondary);
+        margin-bottom: 1rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center animate-fade-in">
+    <div class="col-lg-8">
+        <div class="glass-card">
+            <h2 class="mb-4 text-center">Start Genetic Assessment</h2>
+            <p class="text-muted text-center mb-5">Upload a VCF file (Max 5MB) and specify drugs for pharmacogenomic
+                risk prediction.</p>
+
+            <form method="post" enctype="multipart/form-data" id="uploadForm">
+                {% csrf_token %}
+
+                {% if error %}
+                <div class="alert alert-danger mb-4">{{ error }}</div>
+                {% endif %}
+
+                <label class="form-label">Variant Call Format (VCF) File</label>
+                <div class="upload-area" id="dropZone">
+                    <div class="upload-icon">📄</div>
+                    <div class="h5">Click or Drag & Drop VCF File</div>
+                    <p class="text-muted small">Supports VCF v4.2 specifically for CYP2D6, CYP2C19, etc.</p>
+                    {{ form.uploaded_file }}
+                </div>
+
+                <div class="mb-5">
+                    <label class="form-label" for="drug_input">Target Medications</label>
+                    {{ form.drugs }}
+                    <div class="form-text mt-2">Example: <strong>CODEINE, WARFARIN, CLOPIDOGREL</strong></div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                        <span id="btnText">Analyze Variants</span>
+                        <div id="btnLoader" class="spinner-border spinner-border-sm d-none" role="status"></div>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('vcf_file');
+    const uploadForm = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = document.getElementById('btnText');
+    const btnLoader = document.getElementById('btnLoader');
+
+    dropZone.onclick = () => fileInput.click();
+    dropZone.ondragover = (e) => { e.preventDefault(); dropZone.classList.add('dragover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    dropZone.ondrop = (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            updateFileName();
+        }
+    };
+    fileInput.onchange = () => updateFileName();
+    function updateFileName() {
+        if (fileInput.files.length) {
+            const fileName = fileInput.files[0].name;
+            dropZone.querySelector('.h5').textContent = fileName;
+        }
+    }
+    uploadForm.onsubmit = () => {
+        btnText.textContent = 'Processing...';
+        btnLoader.classList.remove('d-none');
+        submitBtn.disabled = true;
+    };
+</script>
+{% endblock %}
