@@ -20,7 +20,11 @@ class LandingView(View):
     def post(self, request):
         # We handle the upload logic directly on the landing page
         uploaded_file = request.FILES.get('uploaded_file')
-        drug_input = request.POST.get('drugs', '')
+        predefined_drug = request.POST.get('drugs_predefined', '')
+        custom_drug = request.POST.get('drugs_custom', '')
+        
+        # Determine the final drug input (either predefined selection or custom text)
+        drug_input = custom_drug if predefined_drug == 'Others' else predefined_drug
 
         if not uploaded_file or not drug_input:
             return render(request, 'core/landing.html', {'error': 'Please provide both a VCF file and target medications.'})
@@ -194,12 +198,18 @@ class ResultsView(View):
             # CSS class for risk badge (no spaces)
             risk_css = a.risk_label.replace(' ', '') if a.risk_label else 'Unknown'
 
+            risk_data = jo.get('risk_assessment', {})
+
             assessments.append({
                 'id': a.id,
                 'drug_name': a.drug_name,
                 'risk_label': a.risk_label,
                 'risk_css': risk_css,
                 'gene_name': profile.get('primary_gene', 'N/A'),
+                'diplotype': profile.get('diplotype', 'N/A'),
+                'phenotype': profile.get('phenotype', 'N/A'),
+                'confidence_score': risk_data.get('confidence_score', 'N/A'),
+                'severity': risk_data.get('severity', 'N/A'),
                 'summary': llm.get('summary', 'No summary available.'),
                 'mechanism': llm.get('biological_mechanism', 'N/A'),
                 'evidence': llm.get('variant_evidence', 'N/A'),

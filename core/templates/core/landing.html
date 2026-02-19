@@ -157,9 +157,15 @@
     }
 
     .upload-area:hover,
-    .upload-area.dragover {
+    .upload-area.dragover,
+    .upload-area.file-selected {
         border-color: #3b82f6;
         background: rgba(239, 246, 255, 0.8);
+    }
+
+    .upload-area.file-selected .upload-icon {
+        color: #10b981;
+        /* Success green icon */
     }
 
     .upload-icon {
@@ -295,10 +301,25 @@
                 </div>
 
                 <div class="mb-5">
-                    <label class="form-label">Target Medications</label>
-                    <input type="text" name="drugs" id="id_drugs" class="medication-input"
-                        placeholder="CODEINE, WARFARIN, CLOPIDOGREL" required>
-                    <div class="form-text mt-2">Example: <strong>CODEINE, WARFARIN, CLOPIDOGREL</strong></div>
+                    <label class="form-label">Target Medication</label>
+                    <select name="drugs_predefined" id="drugs_predefined" class="medication-input" required>
+                        <option value="" disabled selected>Select a medication...</option>
+                        <option value="CODEINE">CODEINE</option>
+                        <option value="WARFARIN">WARFARIN</option>
+                        <option value="CLOPIDOGREL">CLOPIDOGREL</option>
+                        <option value="SIMVASTATIN">SIMVASTATIN</option>
+                        <option value="AZATHIOPRINE">AZATHIOPRINE</option>
+                        <option value="FLUOROURACIL">FLUOROURACIL</option>
+                        <option value="Others">Others</option>
+                    </select>
+
+                    <div id="other_drug_container" style="display: none;" class="mt-3 animate-fade-in">
+                        <label class="form-label">Specify Other Medication</label>
+                        <input type="text" name="drugs_custom" id="drugs_custom" class="medication-input"
+                            placeholder="Type medication name (e.g. ABACAVIR)">
+                    </div>
+
+                    <div class="form-text mt-2">AI-powered risk analysis based on CPIC guidelines.</div>
                 </div>
 
                 <button type="submit" class="analyze-btn" id="submitBtn">
@@ -353,7 +374,13 @@
         function updateFileName() {
             if (fileInput.files.length) {
                 const fileName = fileInput.files[0].name;
-                dropZone.querySelector('.h5').textContent = fileName;
+                dropZone.querySelector('.h5').textContent = "Selected: " + fileName;
+                dropZone.classList.add('file-selected');
+                dropZone.querySelector('.upload-icon').textContent = '✅'; // Success checkmark
+            } else {
+                dropZone.querySelector('.h5').textContent = "Click or Drag & Drop VCF File";
+                dropZone.classList.remove('file-selected');
+                dropZone.querySelector('.upload-icon').textContent = '📄';
             }
         }
 
@@ -363,11 +390,33 @@
             submitBtn.disabled = true;
         };
 
+        // Drug selection logic
+        const drugSelect = document.getElementById('drugs_predefined');
+        const otherDrugContainer = document.getElementById('other_drug_container');
+        const customDrugInput = document.getElementById('drugs_custom');
+
+        if (drugSelect) {
+            drugSelect.addEventListener('change', () => {
+                if (drugSelect.value === 'Others') {
+                    otherDrugContainer.style.display = 'block';
+                    customDrugInput.required = true;
+                    customDrugInput.focus();
+                } else {
+                    otherDrugContainer.style.display = 'none';
+                    customDrugInput.required = false;
+                    customDrugInput.value = '';
+                }
+            });
+        }
+
         // Smooth Scroll
-        document.querySelector('.cta-button').addEventListener('click', function (e) {
-            e.preventDefault();
-            document.querySelector('#upload-section').scrollIntoView({ behavior: 'smooth' });
-        });
+        const ctaBtn = document.querySelector('.cta-button');
+        if (ctaBtn) {
+            ctaBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector('#upload-section').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
     });
 </script>
 {% endblock %}
