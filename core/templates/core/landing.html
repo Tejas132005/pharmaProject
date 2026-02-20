@@ -285,24 +285,31 @@
             <p class="text-muted text-center mb-5">Upload a VCF file (Max 5MB) and specify drugs for pharmacogenomic
                 risk prediction.</p>
 
-            <form method="post" enctype="multipart/form-data" id="uploadForm">
+            <form method="post" enctype="multipart/form-data" id="uploadForm" novalidate>
                 {% csrf_token %}
 
                 {% if error %}
                 <div class="alert alert-danger mb-4">{{ error }}</div>
                 {% endif %}
 
+                <!-- Custom Validation Alert -->
+                <div id="validation-alert" class="alert alert-danger alert-dismissible fade show d-none mb-4"
+                    role="alert">
+                    <span id="validation-message"></span>
+                    <button type="button" class="btn-close" id="close-alert" aria-label="Close"></button>
+                </div>
+
                 <label class="form-label">Variant Call Format (VCF) File</label>
                 <div class="upload-area" id="dropZone">
                     <div class="upload-icon">📄</div>
                     <div class="h5">Click or Drag & Drop VCF File</div>
                     <p class="text-muted small">Supports VCF v4.2 specifically for CYP2D6, CYP2C19, etc.</p>
-                    <input type="file" name="uploaded_file" id="id_uploaded_file" hidden required>
+                    <input type="file" name="uploaded_file" id="id_uploaded_file" hidden>
                 </div>
 
                 <div class="mb-5">
                     <label class="form-label">Target Medication</label>
-                    <select name="drugs_predefined" id="drugs_predefined" class="medication-input" required>
+                    <select name="drugs_predefined" id="drugs_predefined" class="medication-input">
                         <option value="" disabled selected>Select a medication...</option>
                         <option value="CODEINE">CODEINE</option>
                         <option value="WARFARIN">WARFARIN</option>
@@ -355,6 +362,9 @@
         const submitBtn = document.getElementById('submitBtn');
         const btnText = document.getElementById('btnText');
         const btnLoader = document.getElementById('btnLoader');
+        const drugSelect = document.getElementById('drugs_predefined');
+        const otherDrugContainer = document.getElementById('other_drug_container');
+        const customDrugInput = document.getElementById('drugs_custom');
 
         if (dropZone) {
             dropZone.onclick = () => fileInput.click();
@@ -384,16 +394,59 @@
             }
         }
 
-        uploadForm.onsubmit = () => {
+        const validationAlert = document.getElementById('validation-alert');
+        const validationMessage = document.getElementById('validation-message');
+        const closeAlertBtn = document.getElementById('close-alert');
+
+        const showAlert = (message) => {
+            validationMessage.textContent = message;
+            validationAlert.classList.remove('d-none');
+            // Scroll to alert for better visibility if needed
+            validationAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        };
+
+        const hideAlert = () => {
+            validationAlert.classList.add('d-none');
+        };
+
+        if (closeAlertBtn) {
+            closeAlertBtn.onclick = hideAlert;
+        }
+
+        uploadForm.onsubmit = (e) => {
+            hideAlert();
+
+            let isValid = true;
+            let errorMessage = "";
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                errorMessage = "Please upload a VCF file and select a medication before proceeding.";
+                isValid = false;
+            } else if (!drugSelect.value) {
+                errorMessage = "Please upload a VCF file and select a medication before proceeding.";
+                isValid = false;
+            } else if (drugSelect.value === 'Others' && !customDrugInput.value.trim()) {
+                errorMessage = "Please specify the medication name.";
+                isValid = false;
+            }
+
+            if (!isValid) {
+                showAlert(errorMessage);
+                e.preventDefault();
+                return false;
+            }
+
             btnText.textContent = 'Processing...';
             btnLoader.classList.remove('d-none');
             submitBtn.disabled = true;
         };
 
-        // Drug selection logic
-        const drugSelect = document.getElementById('drugs_predefined');
-        const otherDrugContainer = document.getElementById('other_drug_container');
-        const customDrugInput = document.getElementById('drugs_custom');
+        // Hide alert on input interaction
+        if (fileInput) fileInput.addEventListener('change', hideAlert);
+        if (drugSelect) drugSelect.addEventListener('change', hideAlert);
+        if (customDrugInput) customDrugInput.addEventListener('input', hideAlert);
+
+        // Drug selection logic already initialized above
 
         if (drugSelect) {
             drugSelect.addEventListener('change', () => {
