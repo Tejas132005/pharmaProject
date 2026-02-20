@@ -23,8 +23,27 @@ GENE_PH_MAPPING = {
         "RM": "Rapid Metabolizer",
         "UM": "Ultra-rapid Metabolizer"
     },
-    # Keep adding for other genes ...
-}
+    "CYP2C9": {
+        "PM": "Poor Metabolizer",
+        "IM": "Intermediate Metabolizer",
+        "NM": "Normal Metabolizer"
+    },
+    "SLCO1B1": {
+        "deficient": "Deficient Transporter Function",
+        "low": "Decreased Transporter Function",
+        "normal": "Normal Transporter Function"
+    },
+    "TPMT": {
+        "low": "Low/Intermediate Activity",
+        "deficient": "No Activity (Poor Metabolizer)",
+        "normal": "Normal Activity"
+    },
+    "DPYD": {
+        "deficient": "Deficient Metabolism (Poor)",
+        "low": "Decreased Metabolism (Intermediate)",
+        "normal": "Normal Metabolism"
+    }
+} 
 
 RULES = {
     "CODEINE": {
